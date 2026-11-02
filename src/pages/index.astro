@@ -313,12 +313,15 @@ const steps = [
                 </blockquote>`;
             }
             // youtube/outro (ex.: Canva) — iframe direto, igual ao portfólio de referência
-            // (byalacerdah): o Canva aceita embed via /watch?embed. O iframe captura o toque e
-            // trava o scroll no mobile, por isso a capa (tapfacade) que só libera o
-            // pointer-events do iframe depois do primeiro toque/clique.
+            // (byalacerdah): o Canva só libera ser embutido em iframe na rota /watch?embed —
+            // sem o "embed" ele bloqueia por CSP, então garantimos o parâmetro aqui mesmo que
+            // quem colou o link no admin não tenha incluído. O iframe captura o toque e trava
+            // o scroll no mobile, por isso a capa (tapfacade) que só libera o pointer-events
+            // depois do primeiro toque/clique.
+            const embedSrc = /[?&]embed(=|&|$)/.test(v.url) ? v.url : v.url + (v.url.includes("?") ? "&embed" : "?embed");
             return `
               <div class="relative h-[608px] w-full" data-canva-stage>
-                <iframe loading="lazy" src="${v.url}" title="${escapeHtml(v.title || "Vídeo")}" allow="fullscreen" allowfullscreen class="absolute inset-0 h-full w-full border-0" style="pointer-events: none;"></iframe>
+                <iframe loading="lazy" src="${embedSrc}" title="${escapeHtml(v.title || "Vídeo")}" allow="fullscreen" allowfullscreen class="absolute inset-0 h-full w-full border-0" style="pointer-events: none;"></iframe>
                 <div class="absolute inset-0 cursor-pointer" data-canva-tapfacade role="button" aria-label="Tocar vídeo" tabindex="0"></div>
               </div>`;
           }
