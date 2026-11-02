@@ -1,0 +1,92 @@
+---
+// Faixa decorativa: xadrez rosa/verde torto que ondula e desliza por cima das seções
+// vizinhas. Não ocupa altura no fluxo (h-0) — fica centrada na emenda entre uma seção e
+// a outra. Em vez de um xadrez reto recortado por uma silhueta ondulada, cada LINHA do
+// próprio grid é desenhada como uma curva — as células saem tortas/tecidas, tipo pano.
+const uid = Math.random().toString(36).slice(2, 9);
+const patternEvenId = `checker-even-${uid}`;
+const patternOddId = `checker-odd-${uid}`;
+
+const ROWS = 3;
+
+// mesma curva usada antes pra silhueta externa, mas agora vira uma peça reutilizável:
+// uma linha ondulada "pra frente" (esquerda->direita) e outra "pra trás" (direita->esquerda),
+// que se combinam pra fechar qualquer faixa horizontal entre duas linhas do grid.
+const forward = (y: number, amp: number) =>
+  `M0,${y} Q100,${y + amp} 200,${y} T400,${y} T600,${y} T800,${y} T1000,${y} T1200,${y}`;
+const backward = (y: number, amp: number) =>
+  `L1200,${y} Q1100,${y - amp} 1000,${y} T800,${y} T600,${y} T400,${y} T200,${y} T0,${y}`;
+const band = (yTop: number, ampTop: number, yBottom: number, ampBottom: number) =>
+  `${forward(yTop, ampTop)} ${backward(yBottom, ampBottom)} Z`;
+
+// Três estados da faixa (espessura e altura das cristas mudam) — os mesmos de antes,
+// pra manter a silhueta geral e a animação de morph.
+const outerKeyframes = [
+  { top: 22, amp: 30, bottom: 84 },
+  { top: 18, amp: 22, bottom: 88 },
+  { top: 26, amp: 36, bottom: 80 },
+];
+
+// gera, pra um estado da faixa, as ROWS+1 linhas divisórias do grid: espaçadas
+// igualmente entre o topo e o fundo, com uma ondulação própria (menor que a da
+// silhueta, pra não cruzar a linha vizinha) que alterna de fase a cada linha —
+// é essa alternância que dá o efeito de tecido entrelaçado, não só corrugado.
+const ROW_AMP = 7;
+function gridLines({ top, amp, bottom }: { top: number; amp: number; bottom: number }) {
+  return Array.from({ length: ROWS + 1 }, (_, i) => {
+    const y = top + ((bottom - top) * i) / ROWS;
+    if (i === 0) return { y, amp };
+    if (i === ROWS) return { y, amp: -amp };
+    return { y, amp: i % 2 === 0 ? ROW_AMP : -ROW_AMP };
+  });
+}
+
+// pra cada uma das ROWS faixas, monta a lista de formas (uma por keyframe) já
+// prontas pro atributo `values` do <animate>.
+const rowMorphs = Array.from({ length: ROWS }, (_, r) => {
+  const shapes = outerKeyframes.map((kf) => {
+    const lines = gridLines(kf);
+    return band(lines[r].y, lines[r].amp, lines[r + 1].y, lines[r + 1].amp);
+  });
+  return [...shapes, shapes[0]].join(";");
+});
+---
+<div class="pointer-events-none relative z-10 h-0" aria-hidden="true">
+  <div class="absolute inset-x-0 h-28 -translate-y-1/2 overflow-hidden sm:h-40">
+    <svg
+      viewBox="0 0 800 100"
+      preserveAspectRatio="none"
+      class="h-full w-full -rotate-1 scale-110"
+    >
+      <defs>
+        <!-- listras verticais só de cor (sem xadrez 2x2): a alternância entre linhas
+             vem de usar even/odd em rows vizinhas, então junto com o desenho ondulado
+             de cada linha isso reconstrói o xadrez, só que torto -->
+        <pattern id={patternEvenId} width="50" height="100" patternUnits="userSpaceOnUse">
+          <rect width="25" height="100" x="0" fill="var(--color-pink)" />
+          <rect width="25" height="100" x="25" fill="var(--color-sage-dark)" />
+        </pattern>
+        <pattern id={patternOddId} width="50" height="100" patternUnits="userSpaceOnUse">
+          <rect width="25" height="100" x="0" fill="var(--color-sage-dark)" />
+          <rect width="25" height="100" x="25" fill="var(--color-pink)" />
+        </pattern>
+      </defs>
+      <!-- desenhada até x=1200 (400 além da viewBox) para o loop de -400 emendar sem costura -->
+      <g class="checker-wave">
+        {rowMorphs.map((values, r) => (
+          <path d={values.split(";")[0]} fill={`url(#${r % 2 === 0 ? patternEvenId : patternOddId})`}>
+            <animate
+              attributeName="d"
+              dur="7s"
+              repeatCount="indefinite"
+              calcMode="spline"
+              keyTimes="0;0.33;0.66;1"
+              keySplines="0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1"
+              values={values}
+            />
+          </path>
+        ))}
+      </g>
+    </svg>
+  </div>
+</div>

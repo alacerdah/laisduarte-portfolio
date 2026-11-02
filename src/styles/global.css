@@ -1,0 +1,243 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Archivo", sans-serif;
+  --font-body: "Space Grotesk", sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+
+  --color-cream: #FAF7F2;
+  --color-ink: #34302F;
+
+  --color-sage: #C7D6C1;
+  --color-sage-light: #E6EEE2;
+  --color-sage-dark: #5B7C54;
+
+  --color-pink: #B9A4E0;
+  --color-pink-light: #D7CAE8;
+  --color-pink-dark: #6E5499;
+
+  --color-lilac: #5B7C54;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    /* varinha reta = cursor padrão; hotspot na estrela (ponta), como um lápis */
+    cursor: url("/cursors/wand-hover.png") 11 9, auto;
+  }
+  a,
+  button,
+  [role="button"] {
+    /* varinha diagonal com brilhos = onde dá pra clicar */
+    cursor: url("/cursors/wand-pointer.png") 14 16, pointer;
+  }
+  ::selection {
+    background-color: var(--color-pink);
+    color: var(--color-cream);
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-lilac);
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* scroll-triggered reveals: fade + slide-up by default, scale-in variant for badges/cards */
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s cubic-bezier(0.16, 0.8, 0.24, 1), transform 0.7s cubic-bezier(0.16, 0.8, 0.24, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  [data-reveal="scale"] {
+    transform: scale(0.85);
+  }
+  [data-reveal].is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* hero name: settles into place on load rather than static from first frame */
+  [data-hero-reveal] {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(36px);
+    animation: hero-settle 0.9s cubic-bezier(0.16, 0.8, 0.24, 1) forwards;
+  }
+
+  /* entrance and wobble live on separate elements so they don't fight over transform */
+  .cutout-enter {
+    animation: enter-from-left 3s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+  }
+
+  .cutout-wobble {
+    transform-origin: 50% 100%;
+    animation: wobble 1.4s ease-in-out infinite;
+  }
+
+  /* a cabeça fica alinhada com o corpo, mas com balanço próprio e mais lento (1,9s contra
+     1,4s). Como os tempos não são múltiplos, ela sai e volta do alinhamento sem repetir —
+     é esse dessincronismo que dá a sensação de cabeça solta, mais desalinhada que o corpo */
+  .cutout-drift {
+    transform-origin: 50% 100%;
+    animation: cutout-drift 1.9s ease-in-out infinite;
+  }
+
+  @keyframes cutout-drift {
+    0%,
+    100% {
+      transform: translate(0.7%, -0.5%) rotate(1.2deg);
+    }
+    50% {
+      transform: translate(-0.7%, 0.5%) rotate(-1.2deg);
+    }
+  }
+
+  /* the global reduced-motion rule only shortens durations, which would freeze the
+     cutout mid-tilt — kill the animation outright instead */
+  @media (prefers-reduced-motion: reduce) {
+    .cutout-wobble,
+    .cutout-drift {
+      animation: none !important;
+      transform: none;
+    }
+  }
+
+  @keyframes enter-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-45%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* duração e delay vêm por style inline, um valor por estrela */
+  .star-spin {
+    animation-name: star-spin;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+
+  @keyframes star-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* a onda desliza um período inteiro (400 unidades) e reinicia sem emenda */
+  .checker-wave {
+    animation: checker-drift 9s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .checker-wave {
+      animation: none !important;
+    }
+  }
+
+  @keyframes checker-drift {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-400px);
+    }
+  }
+}
+
+@keyframes hero-settle {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+/* fundo "gradiente desfocado + granulado" (seção Sobre): manchas lilás e verde-suave borradas
+   e uma camada de ruído em SVG por cima, pra dar a textura de filme */
+.blur-grain {
+  position: relative;
+  overflow: hidden;
+  background-color: #f1ede6;
+  background-image:
+    radial-gradient(ellipse 45% 40% at 5% 0%, rgb(215 202 232 / 0.95), transparent 75%),
+    radial-gradient(ellipse 45% 45% at 95% 15%, rgb(199 214 193 / 0.95), transparent 75%),
+    radial-gradient(ellipse 60% 30% at 30% 50%, rgb(210 225 205 / 0.8), transparent 75%),
+    radial-gradient(ellipse 40% 45% at 55% 95%, rgb(215 202 232 / 0.95), transparent 75%),
+    radial-gradient(ellipse 30% 35% at 100% 85%, rgb(230 238 226 / 0.7), transparent 75%);
+}
+.blur-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px;
+  opacity: 0.3;
+  mix-blend-mode: overlay;
+}
+
+/* borda tracejada tipo bordado: inset::after na cor do texto do próprio elemento */
+.stitched {
+  position: relative;
+}
+.stitched::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 2px dashed currentColor;
+  border-radius: inherit;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* três bolinhas lisas (sem degradê) acima do eyebrow das seções novas, nod Y2K discreto */
+.y2k-dots {
+  display: flex;
+  gap: 6px;
+}
+.y2k-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: block;
+}
+
+/* seção de contato: degradê suave do verde-suave (topo) pro branco, com manchas borradas */
+.fade-to-sage {
+  background-color: #fdfcf9;
+  background-image:
+    radial-gradient(ellipse 40% 30% at 12% 45%, rgb(255 255 255 / 0.45), transparent 75%),
+    radial-gradient(ellipse 45% 30% at 85% 30%, rgb(230 238 226 / 0.6), transparent 75%),
+    radial-gradient(ellipse 50% 25% at 40% 15%, rgb(199 214 193 / 0.7), transparent 75%),
+    linear-gradient(to bottom, var(--color-sage) 0%, #dce8d8 35%, #f4f0e7 70%, #fdfcf9 100%);
+}

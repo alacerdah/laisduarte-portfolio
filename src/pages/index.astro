@@ -1,0 +1,575 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CheckerStrip from '../components/CheckerStrip.astro';
+import PhoneMockup from '../components/PhoneMockup.astro';
+
+const navLinks = [
+  { href: "#sobre", label: "Sobre" },
+  { href: "#portfolio", label: "Portfólio" },
+  { href: "#fotos", label: "Fotos" },
+  { href: "#como-trabalho", label: "Como trabalho" },
+  { href: "#contato", label: "Contato" },
+];
+
+// Estrelas decorativas: posição sorteada no build dentro de zonas que evitam o texto,
+// alternando entre as zonas. O delay negativo faz cada uma começar num ponto diferente do giro.
+type Zone = { left: [number, number]; top: [number, number]; show?: string };
+const rand = (min: number, max: number) => Math.random() * (max - min) + min;
+const scatterStars = (count: number, zones: Zone[]) =>
+  Array.from({ length: count }, (_, i) => {
+    const zone = zones[i % zones.length];
+    return {
+      show: zone.show ?? "sm:block",
+      left: rand(...zone.left),
+      top: rand(...zone.top),
+      size: Math.round(rand(16, 40)),
+      duration: +rand(7, 16).toFixed(1),
+      delay: +(-rand(0, 12)).toFixed(1),
+    };
+  });
+// a porcentagem sorteada vale dentro de uma área recuada 4rem de cada borda (já descontando
+// o tamanho da estrela), pra nenhuma encostar na beirada e ser cortada pelo overflow da seção
+const starStyle = (s: ReturnType<typeof scatterStars>[number]) =>
+  `left:calc(4rem + (100% - 8rem - ${s.size}px) * ${(s.left / 100).toFixed(3)}); ` +
+  `top:calc(4rem + (100% - 8rem - ${s.size}px) * ${(s.top / 100).toFixed(3)}); ` +
+  `width:${s.size}px; height:${s.size}px; animation-duration:${s.duration}s; animation-delay:${s.delay}s;`;
+
+const heroStars = scatterStars(8, [
+  { left: [2, 46], top: [0, 3], show: "2xl:block" },
+  { left: [52, 97], top: [3, 35] },
+  { left: [2, 46], top: [98, 100], show: "2xl:block" },
+  { left: [42, 48], top: [12, 88], show: "2xl:block" },
+]);
+const contactStars = scatterStars(10, [
+  { left: [1, 18], top: [4, 90] },
+  { left: [82, 97], top: [4, 90] },
+]);
+
+const funFacts = [
+  "Mineira, de Belo Horizonte",
+  "Tatuadora e empreendedora",
+  "Praticante de Muay Thai",
+  "Apaixonada por beleza e autocuidado",
+];
+
+const aboutPhotos: { src: string; alt: string }[] = [
+  { src: "/images/lais-galeria-2.png", alt: "Laís Duarte" },
+  { src: "/images/lais-galeria-6.png", alt: "Laís Duarte" },
+];
+
+// galeria da seção "Fotos"
+const gallery: { src: string; alt: string }[] = [
+  { src: "/images/lais-galeria-1.png", alt: "Still de conteúdo da Laís Duarte" },
+  { src: "/images/lais-galeria-3.png", alt: "Still de conteúdo da Laís Duarte" },
+  { src: "/images/lais-galeria-4.png", alt: "Still de conteúdo da Laís Duarte" },
+  { src: "/images/lais-galeria-5.png", alt: "Still de conteúdo da Laís Duarte" },
+  { src: "/images/lais-galeria-7.jpg", alt: "Still de conteúdo da Laís Duarte" },
+  { src: "/images/lais-galeria-8.png", alt: "Still de conteúdo da Laís Duarte" },
+  { src: "/images/lais-galeria-9.png", alt: "Still de conteúdo da Laís Duarte" },
+  { src: "/images/lais-galeria-10.jpg", alt: "Still de conteúdo da Laís Duarte" },
+];
+
+// posts em carrossel do Instagram, mostrados com o embed oficial — nenhum ainda.
+const carousels: { title: string; permalink: string }[] = [];
+
+// reels/vídeos do portfólio por nicho — nenhum ainda, a seção mostra um aviso "em breve"
+// enquanto esse array estiver vazio. Formato de cada item, pra quando a Laís mandar os links:
+// { niche: "skincare", brand: "Marca", format: "unboxing", permalink: "https://www.instagram.com/reel/..." }
+const niches = [
+  { id: "skincare", label: "Skincare" },
+  { id: "moda", label: "Moda" },
+  { id: "beleza", label: "Beleza" },
+  { id: "fitness", label: "Fitness" },
+];
+const videos: { niche: string; brand: string; format: string; permalink: string }[] = [];
+// aba só aparece quando o nicho já tem vídeo; "Todos" abre por padrão pra marca ver tudo de cara
+const tabs = [
+  { id: "todos", label: "Todos" },
+  ...niches.filter((n) => videos.some((v) => v.niche === n.id)),
+];
+
+// números de performance — a seção "Resultados" só aparece quando tiver algo aqui.
+const results: { brand: string; format: string; stats: { value: string; label: string }[] }[] = [];
+
+const steps = [
+  {
+    title: "Briefing",
+    text: "Entendo a marca, o produto, o público e o objetivo do vídeo — alcance, conversão ou anúncio.",
+  },
+  {
+    title: "Roteiro",
+    text: "Escrevo o gancho, as falas e as cenas e mando pra sua aprovação antes de gravar.",
+  },
+  {
+    title: "Gravação e edição",
+    text: "Gravo, edito com legenda e trilha e entrego no formato certo pra cada rede, pronto pra postar ou impulsionar.",
+  },
+];
+---
+
+<Layout title="Portfólio Laís Duarte" description="Conteúdo autêntico de UGC em skincare, moda, beleza e fitness.">
+  <main class="overflow-x-clip bg-cream">
+    <!-- HEADER -->
+    <header class="sticky top-0 z-20 border-b border-ink/10 bg-cream/90 backdrop-blur">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <a href="#" class="font-display text-lg font-extrabold tracking-tight">laisduarte.content</a>
+        <nav class="hidden gap-8 sm:flex">
+          {navLinks.map((l) => (
+            <a href={l.href} class="font-display text-sm font-medium text-ink/70 hover:text-ink">{l.label}</a>
+          ))}
+        </nav>
+        <a
+          href="#contato"
+          class="rounded-full bg-pink-dark px-5 py-2 font-display text-sm font-semibold text-cream transition-transform hover:-translate-y-0.5"
+        >
+          Trabalhe comigo
+        </a>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="relative flex flex-col overflow-hidden bg-pink-light pt-8 sm:min-h-[860px] sm:flex-row sm:items-end sm:justify-end sm:pt-0">
+      {heroStars.map((s) => (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 100 100"
+          class={`star-spin pointer-events-none absolute hidden text-pink ${s.show}`}
+          style={starStyle(s)}
+        >
+          <path
+            d="M50 2L61.2 34.6L95.7 35.2L68.1 55.9L78.2 88.8L50 69L21.8 88.8L31.9 55.9L4.3 35.2L38.8 34.6Z"
+            fill="currentColor"
+          />
+        </svg>
+      ))}
+
+      <!-- as fotos são um canvas largo (1366x768) com a Laís encostada no canto inferior
+           direito — object-cover + object-right recorta a mesma janela pras duas camadas,
+           então corpo e cabeça continuam perfeitamente alinhados -->
+      <div class="cutout-enter relative h-[380px] w-full sm:h-[860px] sm:w-1/2">
+        <!-- o balanço fica no bloco, pra girarem juntas -->
+        <div class="cutout-wobble relative h-full w-full">
+          <img
+            src="/images/lais-hero-body.webp"
+            alt="Laís Duarte, UGC creator"
+            class="absolute inset-0 block h-full w-full object-cover object-right"
+            loading="eager"
+          />
+          <!-- alinhada com o corpo; o balanço próprio (mais lento que o do bloco) faz ela
+               sair e voltar do alinhamento sozinha, dando a sensação de cabeça descolada -->
+          <img
+            src="/images/lais-hero-head.png"
+            alt=""
+            aria-hidden="true"
+            class="cutout-drift absolute inset-0 block h-full w-full object-cover object-right"
+            loading="eager"
+          />
+        </div>
+      </div>
+
+      <div class="relative z-10 mt-6 px-6 pb-12 text-center sm:absolute sm:inset-y-0 sm:left-0 sm:right-auto sm:mt-0 sm:flex sm:w-1/2 sm:flex-col sm:justify-center sm:pb-0 sm:pl-16 sm:pr-6 sm:text-left">
+        <p class="font-display text-sm font-semibold tracking-[0.15em] text-pink-dark">CRIADORA UGC</p>
+        <h1 class="mt-3 font-display text-[clamp(2.5rem,calc(19vw-0.6rem),3.75rem)] font-black leading-[0.95] text-sage-dark sm:text-[clamp(2.5rem,calc(9.4vw-1.1rem),6rem)]">
+          <span data-hero-reveal style="animation-delay: 0ms;">LAÍS</span><br />
+          <span data-hero-reveal style="animation-delay: 120ms;">DUARTE</span>
+        </h1>
+        <p class="mx-auto mt-6 max-w-sm text-lg text-ink/75 sm:mx-0">
+          Conteúdo autêntico em skincare, beleza, moda e fitness — espontâneo, criativo e com a
+          cara de quem realmente usa o produto.
+        </p>
+        <div class="mt-6 flex flex-wrap justify-center gap-3 sm:justify-start">
+          <span class="rounded-full bg-cream px-4 py-1.5 font-display text-sm font-medium text-pink-dark">skincare</span>
+          <span class="rounded-full bg-cream px-4 py-1.5 font-display text-sm font-medium text-pink-dark">moda</span>
+          <span class="rounded-full bg-cream px-4 py-1.5 font-display text-sm font-medium text-pink-dark">beleza</span>
+          <span class="rounded-full bg-cream px-4 py-1.5 font-display text-sm font-medium text-pink-dark">fitness</span>
+        </div>
+        <a
+          href="#contato"
+          class="mt-8 inline-block self-center rounded-full bg-sage-dark px-8 py-3 font-display text-sm font-semibold text-cream transition-transform hover:-translate-y-0.5 sm:self-start"
+        >
+          Trabalhe comigo
+        </a>
+      </div>
+    </section>
+
+    <CheckerStrip />
+
+    <!-- SOBRE -->
+    <section id="sobre" class="blur-grain py-24">
+      <div class="relative z-10 mx-auto max-w-6xl px-6">
+        <div data-reveal class="grid gap-6 text-xs leading-snug text-ink/60 sm:ml-auto sm:max-w-xl sm:grid-cols-3">
+          <p>Conteúdo que conecta.<br />Resultado que converte.</p>
+          <p>Siga as minhas<br />redes sociais</p>
+          <p>@laisduarte.content<br />Belo Horizonte<br />Skincare, moda, beleza e fitness</p>
+        </div>
+
+        <div class="mt-16 grid items-end gap-12 lg:grid-cols-2 lg:gap-16">
+          <div data-reveal>
+            <h2 class="font-serif text-6xl italic leading-none text-sage-dark sm:text-8xl">Sobre mim</h2>
+
+            <div class="mt-10 grid grid-cols-2 gap-6">
+              {aboutPhotos.length > 0
+                ? aboutPhotos.map((p) => (
+                    <div class="relative">
+                      <img
+                        src={p.src}
+                        alt={p.alt}
+                        class="aspect-[3/4] w-full object-cover"
+                        loading="lazy"
+                      />
+                      <span
+                        aria-hidden="true"
+                        class="absolute top-1/2 right-0 flex h-11 w-11 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-ink font-display text-xl font-light text-cream"
+                      >
+                        +
+                      </span>
+                    </div>
+                  ))
+                : Array.from({ length: 2 }, (_, i) => (
+                    <div
+                      class={`flex aspect-[3/4] flex-col items-center justify-center gap-2 ${i % 2 === 0 ? "bg-pink-light text-pink-dark" : "bg-sage-light text-sage-dark"}`}
+                    >
+                      <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                        <path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" stroke-linejoin="round" />
+                        <circle cx="12" cy="13.5" r="3.2" />
+                      </svg>
+                      <span class="font-display text-xs font-semibold">foto em breve</span>
+                    </div>
+                  ))}
+            </div>
+          </div>
+
+          <div data-reveal style="--reveal-delay: 120ms;">
+            <div class="text-justify text-xl leading-relaxed text-ink/80">
+              <p>
+                Eu sou a Laís, tenho 28 anos e sou de Belo Horizonte (MG). Sou comunicativa,
+                extrovertida e tenho facilidade diante das câmeras — gosto de criar vídeos
+                espontâneos, dinâmicos e autênticos, que aproximam as marcas das pessoas de um
+                jeito leve e natural.
+              </p>
+              <p class="mt-4">
+                Meu conteúdo transita entre skincare, beleza, moda e fitness, sempre buscando
+                apresentar produtos de forma criativa, valorizar a experiência de uso e despertar
+                identificação com o público.
+              </p>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-2">
+              {funFacts.map((f) => (
+                <span class="rounded-full bg-sage-light px-4 py-1.5 font-display text-sm font-medium text-sage-dark">{f}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PORTFOLIO -->
+    <section id="portfolio" class="relative overflow-hidden bg-pink-light py-20">
+      <div class="relative z-10 mx-auto max-w-6xl px-6">
+        <h2 data-reveal class="font-display text-4xl font-black text-pink-dark">Portfólio</h2>
+        <p data-reveal style="--reveal-delay: 80ms;" class="mt-3 max-w-md text-ink/70">
+          Vídeos separados por nicho, com a marca e o formato de cada um — clique pra assistir.
+        </p>
+
+        {videos.length > 0 ? (
+          <>
+            <div data-reveal style="--reveal-delay: 120ms;" class="mt-8 flex flex-wrap items-center justify-between gap-4">
+              <div role="tablist" aria-label="Nichos" class="flex flex-wrap gap-2">
+                {tabs.map((t, i) => (
+                  <button
+                    type="button"
+                    role="tab"
+                    data-niche-tab={t.id}
+                    aria-selected={i === 0 ? "true" : "false"}
+                    class="rounded-full border border-pink-dark/30 px-4 py-1.5 font-display text-sm font-medium text-pink-dark transition-colors hover:border-pink-dark aria-selected:border-pink-dark aria-selected:bg-pink-dark aria-selected:text-cream"
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              <div data-carousel-nav class="hidden gap-2">
+                {[
+                  { dir: "-1", label: "Vídeos anteriores", d: "M15 18l-6-6 6-6" },
+                  { dir: "1", label: "Próximos vídeos", d: "M9 18l6-6-6-6" },
+                ].map((b) => (
+                  <button
+                    type="button"
+                    data-carousel-dir={b.dir}
+                    aria-label={b.label}
+                    class="flex h-10 w-10 items-center justify-center rounded-full bg-pink-dark text-cream transition-opacity hover:opacity-85 disabled:cursor-default disabled:opacity-30"
+                  >
+                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d={b.d} />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div data-scroll-hint data-niche-list class="-mx-6 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-6 py-4 [scrollbar-width:none] sm:mx-0 sm:justify-center-safe sm:gap-6 sm:px-0 [&::-webkit-scrollbar]:hidden">
+              {videos.map((v, i) => (
+                <div data-niche={v.niche} data-reveal="scale" style={`--reveal-delay: ${(i % 4) * 150}ms;`} class="flex w-[62vw] max-w-[260px] shrink-0 snap-center flex-col items-center gap-3 sm:w-[calc(25%-1.125rem)] sm:max-w-none sm:snap-start">
+                  <PhoneMockup label={`${v.brand} (${v.format})`} tilt="sm:-translate-y-2 sm:rotate-2" embedPermalink={v.permalink} />
+                  <p class="text-center font-display text-base">
+                    <span class="font-semibold text-sage-dark">{v.brand}</span>{" "}
+                    <span class="text-ink/60">({v.format})</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <script>
+              // filtro por nicho: todos os embeds carregam uma vez só, a aba só esconde/mostra
+              const tabButtons = document.querySelectorAll<HTMLButtonElement>("[data-niche-tab]");
+              const items = document.querySelectorAll<HTMLElement>("[data-niche]");
+              const list = document.querySelector<HTMLElement>("[data-niche-list]");
+              const nav = document.querySelector<HTMLElement>("[data-carousel-nav]");
+              const arrows = document.querySelectorAll<HTMLButtonElement>("[data-carousel-dir]");
+              const desktop = window.matchMedia("(min-width: 40rem)");
+
+              const updateArrows = () => {
+                if (!list || !nav) return;
+                const overflows = desktop.matches && list.scrollWidth > list.clientWidth + 1;
+                nav.classList.toggle("hidden", !overflows);
+                nav.classList.toggle("flex", overflows);
+                arrows[0].disabled = list.scrollLeft <= 1;
+                arrows[1].disabled = list.scrollLeft + list.clientWidth >= list.scrollWidth - 1;
+              };
+
+              arrows.forEach((btn) => {
+                btn.addEventListener("click", () => {
+                  list?.scrollBy({ left: Number(btn.dataset.carouselDir) * list.clientWidth });
+                });
+              });
+
+              tabButtons.forEach((btn) => {
+                btn.addEventListener("click", () => {
+                  const niche = btn.dataset.nicheTab;
+                  tabButtons.forEach((b) => b.setAttribute("aria-selected", String(b === btn)));
+                  items.forEach((item) => {
+                    item.hidden = niche !== "todos" && item.dataset.niche !== niche;
+                  });
+                  list?.scrollTo({ left: 0, behavior: "instant" });
+                  updateArrows();
+                });
+              });
+
+              list?.addEventListener("scroll", updateArrows, { passive: true });
+              window.addEventListener("resize", updateArrows);
+              updateArrows();
+            </script>
+          </>
+        ) : (
+          <div data-reveal="scale" style="--reveal-delay: 120ms;" class="stitched mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl bg-cream py-16 text-pink-dark">
+            <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <rect x="3" y="5" width="14" height="14" rx="2" />
+              <path d="M17 9l4-2v10l-4-2" />
+            </svg>
+            <p class="font-display text-sm font-semibold">Em breve: os primeiros vídeos do portfólio</p>
+          </div>
+        )}
+
+        {results.length > 0 && (
+          <>
+            <h3 data-reveal class="mt-20 font-display text-2xl font-black text-pink-dark">Resultados</h3>
+            <div class="mt-8 grid gap-4 sm:grid-cols-3">
+              {results.map((r, i) => (
+                <div data-reveal="scale" style={`--reveal-delay: ${i * 120}ms;`} class="rounded-2xl bg-cream p-6">
+                  <p class="font-display text-sm">
+                    <span class="font-semibold text-sage-dark">{r.brand}</span>{" "}
+                    <span class="text-ink/60">({r.format})</span>
+                  </p>
+                  <dl class="mt-4 flex gap-6">
+                    {r.stats.map((s) => (
+                      <div>
+                        <dt class="sr-only">{s.label}</dt>
+                        <dd class="font-display text-3xl font-black text-pink-dark">{s.value}</dd>
+                        <dd class="text-xs text-ink/60">{s.label}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {carousels.length > 0 && (
+          <>
+            <h3 data-reveal class="mt-20 font-display text-2xl font-black text-pink-dark">Carrosséis</h3>
+            <p data-reveal style="--reveal-delay: 80ms;" class="mt-2 max-w-md text-ink/70">
+              Posts em carrossel pra Instagram — feed montado pra segurar o dedo até o último card.
+            </p>
+
+            <div data-scroll-hint class="-mx-6 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:mx-0 sm:gap-6 sm:snap-none sm:flex-wrap sm:items-start sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
+              {carousels.map((c, i) => (
+                <div data-reveal="scale" style={`--reveal-delay: ${i * 150}ms;`} class="flex w-[62vw] max-w-[260px] shrink-0 snap-center flex-col items-center gap-3 sm:w-auto sm:max-w-none sm:shrink">
+                  <PhoneMockup label={c.title} tilt="sm:-translate-y-2 sm:rotate-2" embedPermalink={c.permalink} />
+                  <p class="font-display text-base font-semibold text-sage-dark">{c.title}</p>
+                </div>
+              ))}
+            </div>
+
+            <script is:inline async src="https://www.instagram.com/embed.js"></script>
+
+            <script>
+              // dá uma "cutucada" de leve no carrossel (só no mobile, onde ele rola) assim
+              // que aparece na tela, pra sinalizar que dá pra arrastar pro lado — só uma vez.
+              const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+              if (!prefersReducedMotion) {
+                const io = new IntersectionObserver(
+                  (entries) => {
+                    for (const entry of entries) {
+                      if (!entry.isIntersecting) continue;
+                      const el = entry.target as HTMLElement;
+                      io.unobserve(el);
+                      if (el.scrollWidth <= el.clientWidth) continue;
+                      setTimeout(() => {
+                        el.style.transition = "transform 450ms ease";
+                        el.style.transform = "translateX(-25px)";
+                        setTimeout(() => {
+                          el.style.transform = "translateX(0)";
+                          setTimeout(() => {
+                            el.style.transition = "";
+                            el.style.transform = "";
+                          }, 450);
+                        }, 450);
+                      }, 700);
+                    }
+                  },
+                  { threshold: 0.4 }
+                );
+                document.querySelectorAll<HTMLElement>("[data-scroll-hint]").forEach((el) => io.observe(el));
+              }
+            </script>
+          </>
+        )}
+
+        <!--
+          Quando os vídeos forem do TikTok, troque o conteúdo do PhoneMockup pelo embed oficial do TikTok:
+
+          <blockquote class="tiktok-embed" cite="URL_DO_VIDEO" data-video-id="ID_DO_VIDEO" style="max-width:605px;min-width:325px;">
+            <section></section>
+          </blockquote>
+          <script async src="https://www.tiktok.com/embed.js"></script>
+
+          O ID do vídeo é o número que aparece na URL, ex: tiktok.com/@user/video/ESSE_NUMERO_AQUI
+        -->
+      </div>
+    </section>
+
+    <CheckerStrip />
+
+    <!-- FOTOS -->
+    <section id="fotos" class="py-24">
+      <div class="mx-auto max-w-6xl px-6">
+        <div class="y2k-dots" aria-hidden="true">
+          <i class="bg-pink"></i>
+          <i class="bg-sage"></i>
+          <i class="border border-ink/15 bg-cream"></i>
+        </div>
+        <h2 data-reveal style="--reveal-delay: 60ms;" class="mt-3 font-display text-4xl font-black text-sage-dark">Fotos</h2>
+        <p data-reveal style="--reveal-delay: 120ms;" class="mt-3 max-w-md text-ink/70">
+          Still e bastidores dos conteúdos.
+        </p>
+
+        <div class="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {gallery.length > 0
+            ? gallery.map((p, i) => (
+                <div data-reveal="scale" style={`--reveal-delay: ${i * 100}ms;`} class="stitched overflow-hidden rounded-2xl text-pink-dark">
+                  <img src={p.src} alt={p.alt} class="aspect-square w-full object-cover" loading="lazy" />
+                </div>
+              ))
+            : Array.from({ length: 6 }, (_, i) => (
+                <div
+                  data-reveal="scale"
+                  style={`--reveal-delay: ${i * 100}ms;`}
+                  class={`stitched flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl ${i % 2 === 0 ? "bg-pink-light text-pink-dark" : "bg-sage-light text-sage-dark"}`}
+                >
+                  <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                    <path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" stroke-linejoin="round" />
+                    <circle cx="12" cy="13.5" r="3.2" />
+                  </svg>
+                  <span class="font-display text-xs font-semibold">foto em breve</span>
+                </div>
+              ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- COMO EU TRABALHO -->
+    <section id="como-trabalho" class="py-24">
+      <div class="mx-auto max-w-6xl px-6">
+        <h2 data-reveal class="font-display text-4xl font-black text-sage-dark">Como eu trabalho</h2>
+        <p data-reveal style="--reveal-delay: 80ms;" class="mt-3 max-w-md text-ink/70">
+          Do briefing ao vídeo pronto, em três passos.
+        </p>
+
+        <ol class="mt-12 grid gap-6 sm:grid-cols-3">
+          {steps.map((s, i) => (
+            <li data-reveal style={`--reveal-delay: ${i * 120}ms;`} class="rounded-2xl border border-ink/10 bg-sage-light p-6">
+              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-pink-dark font-display text-lg font-black text-cream">
+                {i + 1}
+              </span>
+              <h3 class="mt-5 font-display text-xl font-black text-sage-dark">{s.title}</h3>
+              <p class="mt-2 text-ink/75">{s.text}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- CONTATO -->
+    <section id="contato" class="fade-to-sage relative overflow-hidden py-24">
+      {contactStars.map((s) => (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 100 100"
+          class="star-spin pointer-events-none absolute hidden text-pink xl:block"
+          style={starStyle(s)}
+        >
+          <path
+            d="M50 2L61.2 34.6L95.7 35.2L68.1 55.9L78.2 88.8L50 69L21.8 88.8L31.9 55.9L4.3 35.2L38.8 34.6Z"
+            fill="currentColor"
+          />
+        </svg>
+      ))}
+
+      <div class="relative z-10 mx-auto max-w-3xl px-6 text-center">
+        <h2 data-reveal class="font-display text-4xl font-black text-sage-dark">Vamos criar algo juntos?</h2>
+        <p data-reveal style="--reveal-delay: 80ms;" class="mx-auto mt-4 max-w-md text-ink/80">
+          Me manda um email, uma mensagem ou chama nas redes — respondo rapidinho.
+        </p>
+
+        <div data-reveal style="--reveal-delay: 160ms;" class="mt-8 flex flex-col items-center gap-4">
+          <a
+            href="mailto:contato@laisduarte.com"
+            class="rounded-full bg-sage-dark px-8 py-3 font-display text-sm font-semibold text-cream transition-transform hover:-translate-y-0.5"
+          >
+            contato@laisduarte.com
+          </a>
+
+          <a
+            href="tel:+5531998888864"
+            class="font-display text-sm text-ink/80 underline decoration-sage-dark decoration-2 underline-offset-4 transition-opacity hover:opacity-75"
+          >
+            (31) 99888-8864
+          </a>
+
+          <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <a href="https://www.tiktok.com/@laisduarte.content" target="_blank" rel="noopener noreferrer" class="inline-block py-3 font-display text-sm text-ink underline decoration-pink-dark decoration-2 underline-offset-4 transition-opacity hover:opacity-75">
+              @laisduarte.content no TikTok
+            </a>
+            <a href="https://www.instagram.com/laisduarte.content" target="_blank" rel="noopener noreferrer" class="inline-block py-3 font-display text-sm text-ink underline decoration-sage-dark decoration-2 underline-offset-4 transition-opacity hover:opacity-75">
+              @laisduarte.content no Instagram
+            </a>
+          </div>
+
+          <p class="mt-14 font-display text-xs text-ink/80">feito com 💌 por laisduarte.content</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>

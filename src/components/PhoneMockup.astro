@@ -1,0 +1,80 @@
+---
+interface Props {
+  label: string;
+  tilt?: string;
+  href?: string;
+  embedPermalink?: string;
+}
+const { label, tilt = "", href, embedPermalink } = Astro.props;
+const Frame = href ? "a" : "div";
+const frameProps = href ? { href, target: "_blank", rel: "noopener noreferrer" } : {};
+
+// área verde (chroma) do phone-frame.png, ajustada visualmente no devtools pra ficar
+// mais encaixada com o embed real (a medição por pixel não bate 100% com o formato dele).
+const SCREEN = { left: "21.18%", top: "19.08%", width: "54.75%", height: "61.65%" };
+---
+<div class={`relative w-full max-w-[340px] ${tilt}`}>
+  <Frame {...frameProps} class={`relative block ${href && !embedPermalink ? "transition-transform hover:-translate-y-1" : ""}`}>
+    <img src="/images/phone-frame.png" alt="" class="pointer-events-none block w-full select-none" draggable="false" />
+
+    <div
+      class="absolute overflow-hidden rounded-[6px] bg-white"
+      style={`left:${SCREEN.left}; top:${SCREEN.top}; width:${SCREEN.width}; height:${SCREEN.height};`}
+      data-phone-embed={embedPermalink ? "true" : undefined}
+    >
+      {embedPermalink ? (
+        /* o embed oficial do Instagram nunca fica mais estreito que 326px. Deixa ele nascer
+           no tamanho normal dentro do .phone-embed-inner e só DEPOIS encolhe esse wrapper pra
+           caber na telinha verde — script no fim do componente mede o tamanho real e escala */
+        <div class="phone-embed-inner" style="width:342px;">
+          <blockquote
+            class="instagram-media"
+            data-instgrm-permalink={`${embedPermalink}?utm_source=ig_embed&utm_campaign=loading`}
+            data-instgrm-version="14"
+            style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);"
+          >
+            <a href={embedPermalink} target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
+          </blockquote>
+        </div>
+      ) : (
+        <span class="flex h-full items-center justify-center px-2 text-center font-display text-xs font-semibold leading-tight text-pink-dark">
+          {label}
+        </span>
+      )}
+    </div>
+  </Frame>
+</div>
+
+<script>
+  // deixa o embed do Instagram (mínimo 326px) nascer e se redimensionar sozinho num
+  // wrapper interno de tamanho normal, e só encolhe ESSE wrapper pra caber na telinha verde —
+  // assim não mexe no iframe do Instagram e não quebra o resize automático dele.
+  function fitPhoneEmbed(wrap: HTMLElement) {
+    const inner = wrap.querySelector<HTMLElement>(".phone-embed-inner");
+    const iframe = inner?.querySelector<HTMLIFrameElement>("iframe.instagram-media");
+    if (!inner || !iframe) return false;
+    inner.style.transformOrigin = "top left";
+    const apply = () => {
+      const naturalHeight = inner.offsetHeight;
+      // o Instagram entrega uma altura de esqueleto (bem baixa) antes de carregar o post de
+      // verdade; se a gente encolher com base nisso, fica tudo errado. Só encolhe quando a
+      // altura já parece o conteúdo real.
+      if (naturalHeight < 100) return;
+      const naturalWidth = inner.offsetWidth || 342;
+      const scale = wrap.clientWidth / naturalWidth;
+      inner.style.transform = `scale(${scale})`;
+    };
+    apply();
+    new ResizeObserver(apply).observe(iframe);
+    window.addEventListener("resize", apply);
+    return true;
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-phone-embed]").forEach((wrap) => {
+    if (fitPhoneEmbed(wrap)) return;
+    const mo = new MutationObserver(() => {
+      if (fitPhoneEmbed(wrap)) mo.disconnect();
+    });
+    mo.observe(wrap, { childList: true, subtree: true });
+  });
+</script>
