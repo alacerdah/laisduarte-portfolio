@@ -305,11 +305,22 @@ const steps = [
             if (v.platform === "tiktok") {
               return `<blockquote class="tiktok-embed" cite="${v.url}" style="max-width:605px;min-width:325px;"><section></section></blockquote>`;
             }
+            if (v.platform === "instagram") {
+              return `
+                <blockquote class="instagram-media" data-instgrm-permalink="${v.url}?utm_source=ig_embed&utm_campaign=loading" data-instgrm-version="14"
+                  style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
+                  <a href="${v.url}" target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
+                </blockquote>`;
+            }
+            // youtube/outro (ex.: Canva) — iframe direto, igual ao portfólio de referência
+            // (byalacerdah): o Canva aceita embed via /watch?embed. O iframe captura o toque e
+            // trava o scroll no mobile, por isso a capa (tapfacade) que só libera o
+            // pointer-events do iframe depois do primeiro toque/clique.
             return `
-              <blockquote class="instagram-media" data-instgrm-permalink="${v.url}?utm_source=ig_embed&utm_campaign=loading" data-instgrm-version="14"
-                style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
-                <a href="${v.url}" target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
-              </blockquote>`;
+              <div class="relative h-[608px] w-full" data-canva-stage>
+                <iframe loading="lazy" src="${v.url}" title="${escapeHtml(v.title || "Vídeo")}" allow="fullscreen" allowfullscreen class="absolute inset-0 h-full w-full border-0" style="pointer-events: none;"></iframe>
+                <div class="absolute inset-0 cursor-pointer" data-canva-tapfacade role="button" aria-label="Tocar vídeo" tabindex="0"></div>
+              </div>`;
           }
 
           // mesma estrutura visual do PhoneMockup.astro, montada em JS porque esse componente
@@ -387,6 +398,16 @@ const steps = [
           const nav = document.querySelector<HTMLElement>("[data-carousel-nav]");
           const desktop = window.matchMedia("(min-width: 40rem)");
 
+          // o iframe do Canva vem com pointer-events:none (senão ele captura o toque e trava o
+          // scroll da página no mobile); um clique na capa libera o iframe pra tocar o vídeo
+          list?.addEventListener("click", (e) => {
+            const facade = (e.target as HTMLElement).closest<HTMLElement>("[data-canva-tapfacade]");
+            if (!facade) return;
+            const iframe = facade.previousElementSibling as HTMLIFrameElement | null;
+            if (iframe) iframe.style.pointerEvents = "auto";
+            facade.remove();
+          });
+
           function updateArrows() {
             if (!list || !nav) return;
             const overflows = desktop.matches && list.scrollWidth > list.clientWidth + 1;
@@ -442,7 +463,7 @@ const steps = [
 
             watchPhoneEmbeds(list);
             if (withVideos.some((n) => n.videos.some((v) => v.platform === "tiktok"))) processTiktokEmbeds();
-            if (withVideos.some((n) => n.videos.some((v) => v.platform !== "tiktok"))) processInstagramEmbeds();
+            if (withVideos.some((n) => n.videos.some((v) => v.platform === "instagram"))) processInstagramEmbeds();
             updateArrows();
           }
 
