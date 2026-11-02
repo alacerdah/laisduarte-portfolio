@@ -464,6 +464,11 @@ const steps = [
             watchPhoneEmbeds(list);
             if (withVideos.some((n) => n.videos.some((v) => v.platform === "tiktok"))) processTiktokEmbeds();
             if (withVideos.some((n) => n.videos.some((v) => v.platform === "instagram"))) processInstagramEmbeds();
+            // os cards chegam depois que o observer de scroll-reveal do Layout já rodou nos
+            // elementos que existiam no load — sem isso ficam com opacity:0 pra sempre
+            (window as typeof window & { observeReveal?: (els: NodeListOf<Element>) => void }).observeReveal?.(
+              list.querySelectorAll("[data-reveal]")
+            );
             updateArrows();
           }
 

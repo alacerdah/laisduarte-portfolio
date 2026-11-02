@@ -35,8 +35,11 @@ const {
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const revealEls = document.querySelectorAll("[data-reveal]");
 
+      // exposto pra quem insere [data-reveal] depois do load (ex.: os cards de vídeo que
+      // chegam via fetch no cliente) conseguir registrar os elementos novos aqui também
       if (prefersReducedMotion) {
         revealEls.forEach((el) => el.classList.add("is-visible"));
+        window.observeReveal = (els: NodeListOf<Element> | Element[]) => els.forEach((el) => el.classList.add("is-visible"));
       } else {
         const io = new IntersectionObserver(
           (entries) => {
@@ -50,6 +53,7 @@ const {
           { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
         );
         revealEls.forEach((el) => io.observe(el));
+        window.observeReveal = (els: NodeListOf<Element> | Element[]) => els.forEach((el) => io.observe(el));
       }
 
       // SMIL ignores prefers-reduced-motion, so the wave morph has to be pulled manually
