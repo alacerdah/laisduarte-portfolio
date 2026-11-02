@@ -27,14 +27,6 @@
     background-color: var(--color-cream);
     color: var(--color-ink);
     font-family: var(--font-body);
-    /* varinha reta = cursor padrão; hotspot na estrela (ponta), como um lápis */
-    cursor: url("/cursors/wand-hover.png") 11 9, auto;
-  }
-  a,
-  button,
-  [role="button"] {
-    /* varinha diagonal com brilhos = onde dá pra clicar */
-    cursor: url("/cursors/wand-pointer.png") 14 16, pointer;
   }
   ::selection {
     background-color: var(--color-pink);

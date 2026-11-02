@@ -72,21 +72,9 @@ const gallery: { src: string; alt: string }[] = [
 // posts em carrossel do Instagram, mostrados com o embed oficial — nenhum ainda.
 const carousels: { title: string; permalink: string }[] = [];
 
-// reels/vídeos do portfólio por nicho — nenhum ainda, a seção mostra um aviso "em breve"
-// enquanto esse array estiver vazio. Formato de cada item, pra quando a Laís mandar os links:
-// { niche: "skincare", brand: "Marca", format: "unboxing", permalink: "https://www.instagram.com/reel/..." }
-const niches = [
-  { id: "skincare", label: "Skincare" },
-  { id: "moda", label: "Moda" },
-  { id: "beleza", label: "Beleza" },
-  { id: "fitness", label: "Fitness" },
-];
-const videos: { niche: string; brand: string; format: string; permalink: string }[] = [];
-// aba só aparece quando o nicho já tem vídeo; "Todos" abre por padrão pra marca ver tudo de cara
-const tabs = [
-  { id: "todos", label: "Todos" },
-  ...niches.filter((n) => videos.some((v) => v.niche === n.id)),
-];
+// reels/vídeos do portfólio por nicho vêm do ugc-admin (fetch client-side no <script> lá
+// embaixo, por PUBLIC_PROJECT_SLUG) — a seção mostra "em breve" enquanto não tiver nenhum
+// nicho com vídeo cadastrado lá, e nunca quebra o site se o admin estiver fora do ar.
 
 // números de performance — a seção "Resultados" só aparece quando tiver algo aqui.
 const results: { brand: string; format: string; stats: { value: string; label: string }[] }[] = [];
@@ -272,104 +260,196 @@ const steps = [
           Vídeos separados por nicho, com a marca e o formato de cada um — clique pra assistir.
         </p>
 
-        {videos.length > 0 ? (
-          <>
-            <div data-reveal style="--reveal-delay: 120ms;" class="mt-8 flex flex-wrap items-center justify-between gap-4">
-              <div role="tablist" aria-label="Nichos" class="flex flex-wrap gap-2">
-                {tabs.map((t, i) => (
-                  <button
-                    type="button"
-                    role="tab"
-                    data-niche-tab={t.id}
-                    aria-selected={i === 0 ? "true" : "false"}
-                    class="rounded-full border border-pink-dark/30 px-4 py-1.5 font-display text-sm font-medium text-pink-dark transition-colors hover:border-pink-dark aria-selected:border-pink-dark aria-selected:bg-pink-dark aria-selected:text-cream"
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+        <div id="portfolio-controls" hidden data-reveal style="--reveal-delay: 120ms;" class="mt-8 flex flex-wrap items-center justify-between gap-4">
+          <div role="tablist" aria-label="Nichos" data-niche-tabs class="flex flex-wrap gap-2"></div>
 
-              <div data-carousel-nav class="hidden gap-2">
-                {[
-                  { dir: "-1", label: "Vídeos anteriores", d: "M15 18l-6-6 6-6" },
-                  { dir: "1", label: "Próximos vídeos", d: "M9 18l6-6-6-6" },
-                ].map((b) => (
-                  <button
-                    type="button"
-                    data-carousel-dir={b.dir}
-                    aria-label={b.label}
-                    class="flex h-10 w-10 items-center justify-center rounded-full bg-pink-dark text-cream transition-opacity hover:opacity-85 disabled:cursor-default disabled:opacity-30"
-                  >
-                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d={b.d} />
-                    </svg>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div data-scroll-hint data-niche-list class="-mx-6 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-6 py-4 [scrollbar-width:none] sm:mx-0 sm:justify-center-safe sm:gap-6 sm:px-0 [&::-webkit-scrollbar]:hidden">
-              {videos.map((v, i) => (
-                <div data-niche={v.niche} data-reveal="scale" style={`--reveal-delay: ${(i % 4) * 150}ms;`} class="flex w-[62vw] max-w-[260px] shrink-0 snap-center flex-col items-center gap-3 sm:w-[calc(25%-1.125rem)] sm:max-w-none sm:snap-start">
-                  <PhoneMockup label={`${v.brand} (${v.format})`} tilt="sm:-translate-y-2 sm:rotate-2" embedPermalink={v.permalink} />
-                  <p class="text-center font-display text-base">
-                    <span class="font-semibold text-sage-dark">{v.brand}</span>{" "}
-                    <span class="text-ink/60">({v.format})</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <script>
-              // filtro por nicho: todos os embeds carregam uma vez só, a aba só esconde/mostra
-              const tabButtons = document.querySelectorAll<HTMLButtonElement>("[data-niche-tab]");
-              const items = document.querySelectorAll<HTMLElement>("[data-niche]");
-              const list = document.querySelector<HTMLElement>("[data-niche-list]");
-              const nav = document.querySelector<HTMLElement>("[data-carousel-nav]");
-              const arrows = document.querySelectorAll<HTMLButtonElement>("[data-carousel-dir]");
-              const desktop = window.matchMedia("(min-width: 40rem)");
-
-              const updateArrows = () => {
-                if (!list || !nav) return;
-                const overflows = desktop.matches && list.scrollWidth > list.clientWidth + 1;
-                nav.classList.toggle("hidden", !overflows);
-                nav.classList.toggle("flex", overflows);
-                arrows[0].disabled = list.scrollLeft <= 1;
-                arrows[1].disabled = list.scrollLeft + list.clientWidth >= list.scrollWidth - 1;
-              };
-
-              arrows.forEach((btn) => {
-                btn.addEventListener("click", () => {
-                  list?.scrollBy({ left: Number(btn.dataset.carouselDir) * list.clientWidth });
-                });
-              });
-
-              tabButtons.forEach((btn) => {
-                btn.addEventListener("click", () => {
-                  const niche = btn.dataset.nicheTab;
-                  tabButtons.forEach((b) => b.setAttribute("aria-selected", String(b === btn)));
-                  items.forEach((item) => {
-                    item.hidden = niche !== "todos" && item.dataset.niche !== niche;
-                  });
-                  list?.scrollTo({ left: 0, behavior: "instant" });
-                  updateArrows();
-                });
-              });
-
-              list?.addEventListener("scroll", updateArrows, { passive: true });
-              window.addEventListener("resize", updateArrows);
-              updateArrows();
-            </script>
-          </>
-        ) : (
-          <div data-reveal="scale" style="--reveal-delay: 120ms;" class="stitched mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl bg-cream py-16 text-pink-dark">
-            <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-              <rect x="3" y="5" width="14" height="14" rx="2" />
-              <path d="M17 9l4-2v10l-4-2" />
-            </svg>
-            <p class="font-display text-sm font-semibold">Em breve: os primeiros vídeos do portfólio</p>
+          <div data-carousel-nav class="hidden gap-2">
+            {[
+              { dir: "-1", label: "Vídeos anteriores", d: "M15 18l-6-6 6-6" },
+              { dir: "1", label: "Próximos vídeos", d: "M9 18l6-6-6-6" },
+            ].map((b) => (
+              <button
+                type="button"
+                data-carousel-dir={b.dir}
+                aria-label={b.label}
+                class="flex h-10 w-10 items-center justify-center rounded-full bg-pink-dark text-cream transition-opacity hover:opacity-85 disabled:cursor-default disabled:opacity-30"
+              >
+                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d={b.d} />
+                </svg>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+
+        <div id="portfolio-list" hidden data-scroll-hint data-niche-list class="-mx-6 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-6 py-4 [scrollbar-width:none] sm:mx-0 sm:justify-center-safe sm:gap-6 sm:px-0 [&::-webkit-scrollbar]:hidden"></div>
+
+        <div id="portfolio-empty" data-reveal="scale" style="--reveal-delay: 120ms;" class="stitched mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl bg-cream py-16 text-pink-dark">
+          <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="3" y="5" width="14" height="14" rx="2" />
+            <path d="M17 9l4-2v10l-4-2" />
+          </svg>
+          <p class="font-display text-sm font-semibold">Em breve: os primeiros vídeos do portfólio</p>
+        </div>
+
+        <script>
+          import type { ApiNiche, ApiVideo } from "../shared/videos-api";
+          import { fetchProjectNiches } from "../shared/videos-api";
+
+          const escapeHtml = (s: string) =>
+            s.replace(/[&<>"']/g, (c) => (({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }) as Record<string, string>)[c]);
+
+          const TILTS = ["sm:-translate-y-2 sm:rotate-2", "", "sm:rotate-1", "sm:translate-y-2 sm:-rotate-1"];
+
+          function screenHtml(v: ApiVideo): string {
+            if (v.platform === "tiktok") {
+              return `<blockquote class="tiktok-embed" cite="${v.url}" style="max-width:605px;min-width:325px;"><section></section></blockquote>`;
+            }
+            return `
+              <blockquote class="instagram-media" data-instgrm-permalink="${v.url}?utm_source=ig_embed&utm_campaign=loading" data-instgrm-version="14"
+                style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
+                <a href="${v.url}" target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
+              </blockquote>`;
+          }
+
+          // mesma estrutura visual do PhoneMockup.astro, montada em JS porque esse componente
+          // só existe em build-time — os cards de verdade chegam depois, via fetch no cliente.
+          function cardHtml(v: ApiVideo, nicheId: string, tilt: string): string {
+            const label = v.title || "Vídeo";
+            return `
+              <div data-niche="${nicheId}" data-reveal="scale" class="flex w-[62vw] max-w-[260px] shrink-0 snap-center flex-col items-center gap-3 sm:w-[calc(25%-1.125rem)] sm:max-w-none sm:snap-start">
+                <div class="relative w-full max-w-[340px] ${tilt}">
+                  <div class="relative block">
+                    <img src="/images/phone-frame.png" alt="" class="pointer-events-none block w-full select-none" draggable="false" />
+                    <div class="absolute overflow-hidden rounded-[6px] bg-white" style="left:21.18%; top:19.08%; width:54.75%; height:61.65%;" data-phone-embed="true">
+                      <div class="phone-embed-inner" style="width:342px;">${screenHtml(v)}</div>
+                    </div>
+                  </div>
+                </div>
+                <p class="text-center font-display text-base">
+                  <span class="font-semibold text-sage-dark">${escapeHtml(label)}</span>${v.tag ? ` <span class="text-ink/60">(${escapeHtml(v.tag)})</span>` : ""}
+                </p>
+              </div>`;
+          }
+
+          // réplica do script de ajuste de escala do PhoneMockup.astro — aquele só roda nos
+          // embeds que já existiam no HTML gerado no build, não alcança os que a gente insere
+          // depois via fetch, por isso duplicamos aqui pros cards dinâmicos.
+          function fitPhoneEmbed(wrap: HTMLElement): boolean {
+            const inner = wrap.querySelector<HTMLElement>(".phone-embed-inner");
+            const iframe = inner?.querySelector<HTMLIFrameElement>("iframe");
+            if (!inner || !iframe) return false;
+            inner.style.transformOrigin = "top left";
+            const apply = () => {
+              const naturalHeight = inner.offsetHeight;
+              if (naturalHeight < 100) return;
+              const naturalWidth = inner.offsetWidth || 342;
+              const scale = wrap.clientWidth / naturalWidth;
+              inner.style.transform = `scale(${scale})`;
+            };
+            apply();
+            new ResizeObserver(apply).observe(iframe);
+            window.addEventListener("resize", apply);
+            return true;
+          }
+          function watchPhoneEmbeds(root: ParentNode) {
+            root.querySelectorAll<HTMLElement>("[data-phone-embed]").forEach((wrap) => {
+              if (fitPhoneEmbed(wrap)) return;
+              const mo = new MutationObserver(() => {
+                if (fitPhoneEmbed(wrap)) mo.disconnect();
+              });
+              mo.observe(wrap, { childList: true, subtree: true });
+            });
+          }
+
+          function ensureScript(src: string) {
+            if (document.querySelector(`script[src="${src}"]`)) return false;
+            const s = document.createElement("script");
+            s.src = src;
+            s.async = true;
+            document.body.appendChild(s);
+            return true;
+          }
+          function processInstagramEmbeds() {
+            const w = window as typeof window & { instgrm?: { Embeds: { process(): void } } };
+            if (w.instgrm?.Embeds) w.instgrm.Embeds.process();
+            else ensureScript("https://www.instagram.com/embed.js");
+          }
+          function processTiktokEmbeds() {
+            document.querySelector('script[src="https://www.tiktok.com/embed.js"]')?.remove();
+            ensureScript("https://www.tiktok.com/embed.js");
+          }
+
+          const controls = document.getElementById("portfolio-controls");
+          const tabsWrap = document.querySelector<HTMLElement>("[data-niche-tabs]");
+          const list = document.getElementById("portfolio-list");
+          const empty = document.getElementById("portfolio-empty");
+          const nav = document.querySelector<HTMLElement>("[data-carousel-nav]");
+          const desktop = window.matchMedia("(min-width: 40rem)");
+
+          function updateArrows() {
+            if (!list || !nav) return;
+            const overflows = desktop.matches && list.scrollWidth > list.clientWidth + 1;
+            nav.classList.toggle("hidden", !overflows);
+            nav.classList.toggle("flex", overflows);
+            const arrows = nav.querySelectorAll<HTMLButtonElement>("[data-carousel-dir]");
+            if (arrows[0]) arrows[0].disabled = list.scrollLeft <= 1;
+            if (arrows[1]) arrows[1].disabled = list.scrollLeft + list.clientWidth >= list.scrollWidth - 1;
+          }
+
+          nav?.addEventListener("click", (e) => {
+            const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-carousel-dir]");
+            if (!btn || !list) return;
+            list.scrollBy({ left: Number(btn.dataset.carouselDir) * list.clientWidth });
+          });
+
+          tabsWrap?.addEventListener("click", (e) => {
+            const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-niche-tab]");
+            if (!btn || !list) return;
+            const niche = btn.dataset.nicheTab;
+            tabsWrap.querySelectorAll("[data-niche-tab]").forEach((b) => b.setAttribute("aria-selected", String(b === btn)));
+            list.querySelectorAll<HTMLElement>("[data-niche]").forEach((item) => {
+              item.hidden = niche !== "todos" && item.dataset.niche !== niche;
+            });
+            list.scrollTo({ left: 0, behavior: "instant" });
+            updateArrows();
+          });
+
+          list?.addEventListener("scroll", updateArrows, { passive: true });
+          window.addEventListener("resize", updateArrows);
+
+          function renderPortfolio(niches: ApiNiche[]) {
+            const withVideos = niches.filter((n) => n.videos.length > 0);
+            if (!controls || !tabsWrap || !list || !empty || withVideos.length === 0) return;
+
+            const tabsHtml = [
+              `<button type="button" role="tab" data-niche-tab="todos" aria-selected="true" class="rounded-full border border-pink-dark/30 px-4 py-1.5 font-display text-sm font-medium text-pink-dark transition-colors hover:border-pink-dark aria-selected:border-pink-dark aria-selected:bg-pink-dark aria-selected:text-cream">Todos</button>`,
+              ...withVideos.map(
+                (n) =>
+                  `<button type="button" role="tab" data-niche-tab="${n.id}" aria-selected="false" class="rounded-full border border-pink-dark/30 px-4 py-1.5 font-display text-sm font-medium text-pink-dark transition-colors hover:border-pink-dark aria-selected:border-pink-dark aria-selected:bg-pink-dark aria-selected:text-cream">${escapeHtml(n.name)}</button>`,
+              ),
+            ].join("");
+            tabsWrap.innerHTML = tabsHtml;
+
+            let i = 0;
+            list.innerHTML = withVideos
+              .flatMap((n) => n.videos.map((v) => cardHtml(v, n.id, TILTS[i++ % TILTS.length])))
+              .join("");
+
+            empty.hidden = true;
+            controls.hidden = false;
+            list.hidden = false;
+
+            watchPhoneEmbeds(list);
+            if (withVideos.some((n) => n.videos.some((v) => v.platform === "tiktok"))) processTiktokEmbeds();
+            if (withVideos.some((n) => n.videos.some((v) => v.platform !== "tiktok"))) processInstagramEmbeds();
+            updateArrows();
+          }
+
+          fetchProjectNiches().then((niches) => {
+            if (niches) renderPortfolio(niches);
+          });
+        </script>
 
         {results.length > 0 && (
           <>
