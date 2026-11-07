@@ -1,7 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import CheckerStrip from '../components/CheckerStrip.astro';
-import PhoneMockup from '../components/PhoneMockup.astro';
 
 const navLinks = [
   { href: "#sobre", label: "Sobre" },
@@ -69,10 +68,7 @@ const gallery: { src: string; alt: string }[] = [
   { src: "/images/lais-galeria-10.jpg", alt: "Still de conteúdo da Laís Duarte" },
 ];
 
-// posts em carrossel do Instagram, mostrados com o embed oficial — nenhum ainda.
-const carousels: { title: string; permalink: string }[] = [];
-
-// reels/vídeos do portfólio por nicho vêm do ugc-admin (fetch client-side no <script> lá
+// reels/vídeos do portfólio, fotos da galeria e posts de carrossel vêm do ugc-admin (fetch client-side no <script> lá
 // embaixo, por PUBLIC_PROJECT_SLUG) — a seção mostra "em breve" enquanto não tiver nenhum
 // nicho com vídeo cadastrado lá, e nunca quebra o site se o admin estiver fora do ar.
 
@@ -131,25 +127,13 @@ const steps = [
         </svg>
       ))}
 
-      <!-- as fotos são um canvas largo (1366x768) com a Laís encostada no canto inferior
-           direito — object-cover + object-right recorta a mesma janela pras duas camadas,
-           então corpo e cabeça continuam perfeitamente alinhados -->
+      <!-- foto única (recorte já vem pronto, com a borda creme) — o balanço fica no bloco -->
       <div class="cutout-enter relative h-[380px] w-full sm:h-[860px] sm:w-1/2">
-        <!-- o balanço fica no bloco, pra girarem juntas -->
         <div class="cutout-wobble relative h-full w-full">
           <img
-            src="/images/lais-hero-body.webp"
+            src="/images/lais-hero-cover.webp"
             alt="Laís Duarte, UGC creator"
-            class="absolute inset-0 block h-full w-full object-cover object-right"
-            loading="eager"
-          />
-          <!-- alinhada com o corpo; o balanço próprio (mais lento que o do bloco) faz ela
-               sair e voltar do alinhamento sozinha, dando a sensação de cabeça descolada -->
-          <img
-            src="/images/lais-hero-head.png"
-            alt=""
-            aria-hidden="true"
-            class="cutout-drift absolute inset-0 block h-full w-full object-cover object-right"
+            class="absolute inset-0 block h-full w-full object-contain object-bottom"
             loading="eager"
           />
         </div>
@@ -293,8 +277,8 @@ const steps = [
         </div>
 
         <script>
-          import type { ApiNiche, ApiVideo } from "../shared/videos-api";
-          import { fetchProjectNiches } from "../shared/videos-api";
+          import type { ApiNiche, ApiVideo, ApiGalleryPhoto, ApiCarouselPost } from "../shared/videos-api";
+          import { fetchProjectContent } from "../shared/videos-api";
 
           const escapeHtml = (s: string) =>
             s.replace(/[&<>"']/g, (c) => (({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }) as Record<string, string>)[c]);
@@ -402,8 +386,9 @@ const steps = [
           const desktop = window.matchMedia("(min-width: 40rem)");
 
           // o iframe do Canva vem com pointer-events:none (senão ele captura o toque e trava o
-          // scroll da página no mobile); um clique na capa libera o iframe pra tocar o vídeo
-          list?.addEventListener("click", (e) => {
+          // scroll da página no mobile); um clique na capa libera o iframe pra tocar o vídeo.
+          // No document (não só em `list`) porque o mesmo padrão vale pro carrossel também.
+          document.addEventListener("click", (e) => {
             const facade = (e.target as HTMLElement).closest<HTMLElement>("[data-canva-tapfacade]");
             if (!facade) return;
             const iframe = facade.previousElementSibling as HTMLIFrameElement | null;
@@ -475,8 +460,99 @@ const steps = [
             updateArrows();
           }
 
-          fetchProjectNiches().then((niches) => {
-            if (niches) renderPortfolio(niches);
+          // post de carrossel: só o link do Instagram embeda nativo (com swipe); com um embed do
+          // Canva também, mostra o Canva como capa + um link separado pra ver no Instagram — o
+          // clique não pode ser capturado de dentro do iframe do Canva (cross-origin).
+          function carouselScreenHtml(c: ApiCarouselPost): string {
+            if (c.canva_url) {
+              const embedSrc = /[?&]embed(=|&|$)/.test(c.canva_url) ? c.canva_url : c.canva_url + (c.canva_url.includes("?") ? "&embed" : "?embed");
+              return `
+                <div class="relative h-[608px] w-full" data-canva-stage>
+                  <iframe loading="lazy" src="${embedSrc}" title="${escapeHtml(c.title || "Carrossel")}" allow="fullscreen" allowfullscreen class="absolute inset-0 h-full w-full border-0" style="pointer-events: none;"></iframe>
+                  <div class="absolute inset-0 cursor-pointer" data-canva-tapfacade role="button" aria-label="Tocar" tabindex="0"></div>
+                </div>`;
+            }
+            return `
+              <blockquote class="instagram-media" data-instgrm-permalink="${c.instagram_url}?utm_source=ig_embed&utm_campaign=loading" data-instgrm-version="14"
+                style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
+                <a href="${c.instagram_url}" target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
+              </blockquote>`;
+          }
+
+          function carouselCardHtml(c: ApiCarouselPost, tilt: string): string {
+            const label = c.title || "Carrossel";
+            return `
+              <div data-reveal="scale" class="flex w-[62vw] max-w-[260px] shrink-0 snap-center flex-col items-center gap-3 sm:w-auto sm:max-w-none sm:shrink">
+                <div class="relative w-full max-w-[340px] ${tilt}">
+                  <div class="relative block">
+                    <img src="/images/phone-frame.png" alt="" class="pointer-events-none block w-full select-none" draggable="false" />
+                    <div class="absolute overflow-hidden rounded-[6px] bg-white" style="left:21.18%; top:19.08%; width:54.75%; height:61.65%;" data-phone-embed="true">
+                      <div class="phone-embed-inner" style="width:342px;">${carouselScreenHtml(c)}</div>
+                    </div>
+                  </div>
+                </div>
+                <p class="text-center font-display text-base font-semibold text-sage-dark">${escapeHtml(label)}</p>
+                ${c.canva_url ? `<a href="${c.instagram_url}" target="_blank" rel="noopener noreferrer" class="font-display text-xs font-semibold text-pink-dark underline decoration-2 underline-offset-2">Ver no Instagram ↗</a>` : ""}
+              </div>`;
+          }
+
+          function renderCarousels(carousels: ApiCarouselPost[]) {
+            const carouselList = document.getElementById("carousel-list");
+            const carouselEmpty = document.getElementById("carousel-empty");
+            if (!carouselList || !carouselEmpty || carousels.length === 0) return;
+
+            carouselList.innerHTML = carousels.map((c, i) => carouselCardHtml(c, TILTS[i % TILTS.length])).join("");
+            carouselEmpty.hidden = true;
+            carouselList.hidden = false;
+
+            watchPhoneEmbeds(carouselList);
+            processInstagramEmbeds();
+            (window as typeof window & { observeReveal?: (els: NodeListOf<Element>) => void }).observeReveal?.(
+              carouselList.querySelectorAll("[data-reveal]")
+            );
+          }
+
+          // foto da galeria: embed nativo do post (Instagram ou TikTok), igual aos vídeos, ou a
+          // arte do Canva direto (iframe) — sem precisar subir arquivo de imagem nenhum.
+          function galleryCardHtml(p: ApiGalleryPhoto): string {
+            if (p.platform === "canva") {
+              const embedSrc = /[?&]embed(=|&|$)/.test(p.url) ? p.url : p.url + (p.url.includes("?") ? "&embed" : "?embed");
+              return `
+                <div data-reveal="scale" class="social-embed relative aspect-[3/4] w-[300px] max-w-full overflow-hidden rounded-2xl" data-canva-stage>
+                  <iframe loading="lazy" src="${embedSrc}" title="${escapeHtml(p.title || "Canva")}" allow="fullscreen" allowfullscreen class="absolute border-0" style="pointer-events: none; left: 50%; top: 0; width: 140%; height: calc(100% + 70px); transform: translateX(-50%);"></iframe>
+                  <div class="absolute inset-0 cursor-pointer" data-canva-tapfacade role="button" aria-label="Tocar" tabindex="0"></div>
+                </div>`;
+            }
+            const screen =
+              p.platform === "tiktok"
+                ? `<blockquote class="tiktok-embed" cite="${p.url}" style="max-width:605px;min-width:325px;"><section></section></blockquote>`
+                : `
+                  <blockquote class="instagram-media" data-instgrm-permalink="${p.url}?utm_source=ig_embed&utm_campaign=loading" data-instgrm-version="14"
+                    style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
+                    <a href="${p.url}" target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
+                  </blockquote>`;
+            return `<div data-reveal="scale" class="social-embed w-[300px] max-w-full overflow-hidden rounded-2xl">${screen}</div>`;
+          }
+
+          function renderGallery(gallery: ApiGalleryPhoto[]) {
+            const grid = document.getElementById("fotos-grid");
+            if (!grid || gallery.length === 0) return;
+
+            grid.className = "mt-10 flex flex-wrap justify-center gap-4";
+            grid.innerHTML = gallery.map((p) => galleryCardHtml(p)).join("");
+
+            if (gallery.some((p) => p.platform === "tiktok")) processTiktokEmbeds();
+            if (gallery.some((p) => p.platform === "instagram")) processInstagramEmbeds();
+            (window as typeof window & { observeReveal?: (els: NodeListOf<Element>) => void }).observeReveal?.(
+              grid.querySelectorAll("[data-reveal]")
+            );
+          }
+
+          fetchProjectContent().then((content) => {
+            if (!content) return;
+            renderPortfolio(content.niches);
+            renderCarousels(content.carousels);
+            renderGallery(content.gallery);
           });
         </script>
 
@@ -505,56 +581,53 @@ const steps = [
           </>
         )}
 
-        {carousels.length > 0 && (
-          <>
-            <h3 data-reveal class="mt-20 font-display text-2xl font-black text-pink-dark">Carrosséis</h3>
-            <p data-reveal style="--reveal-delay: 80ms;" class="mt-2 max-w-md text-ink/70">
-              Posts em carrossel pra Instagram — feed montado pra segurar o dedo até o último card.
-            </p>
+        <h3 data-reveal class="mt-20 font-display text-2xl font-black text-pink-dark">Carrosséis</h3>
+        <p data-reveal style="--reveal-delay: 80ms;" class="mt-2 max-w-md text-ink/70">
+          Posts em carrossel pra Instagram — feed montado pra segurar o dedo até o último card.
+        </p>
 
-            <div data-scroll-hint class="-mx-6 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:mx-0 sm:gap-6 sm:snap-none sm:flex-wrap sm:items-start sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
-              {carousels.map((c, i) => (
-                <div data-reveal="scale" style={`--reveal-delay: ${i * 150}ms;`} class="flex w-[62vw] max-w-[260px] shrink-0 snap-center flex-col items-center gap-3 sm:w-auto sm:max-w-none sm:shrink">
-                  <PhoneMockup label={c.title} tilt="sm:-translate-y-2 sm:rotate-2" embedPermalink={c.permalink} />
-                  <p class="font-display text-base font-semibold text-sage-dark">{c.title}</p>
-                </div>
-              ))}
-            </div>
+        <div id="carousel-list" hidden data-scroll-hint class="-mx-6 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:mx-0 sm:gap-6 sm:snap-none sm:flex-wrap sm:items-start sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden" />
 
-            <script is:inline async src="https://www.instagram.com/embed.js"></script>
+        <div id="carousel-empty" data-reveal="scale" style="--reveal-delay: 120ms;" class="stitched mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl py-16 text-pink-dark">
+          <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="3" y="5" width="14" height="14" rx="2" />
+            <path d="M17 9l4-2v10l-4-2" />
+          </svg>
+          <p class="font-display text-sm font-semibold">Em breve: os primeiros carrosséis</p>
+        </div>
 
-            <script>
-              // dá uma "cutucada" de leve no carrossel (só no mobile, onde ele rola) assim
-              // que aparece na tela, pra sinalizar que dá pra arrastar pro lado — só uma vez.
-              const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-              if (!prefersReducedMotion) {
-                const io = new IntersectionObserver(
-                  (entries) => {
-                    for (const entry of entries) {
-                      if (!entry.isIntersecting) continue;
-                      const el = entry.target as HTMLElement;
-                      io.unobserve(el);
-                      if (el.scrollWidth <= el.clientWidth) continue;
+        <script is:inline async src="https://www.instagram.com/embed.js"></script>
+
+        <script>
+          // dá uma "cutucada" de leve no carrossel (só no mobile, onde ele rola) assim
+          // que aparece na tela, pra sinalizar que dá pra arrastar pro lado — só uma vez.
+          const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          if (!prefersReducedMotion) {
+            const io = new IntersectionObserver(
+              (entries) => {
+                for (const entry of entries) {
+                  if (!entry.isIntersecting) continue;
+                  const el = entry.target as HTMLElement;
+                  io.unobserve(el);
+                  if (el.scrollWidth <= el.clientWidth) continue;
+                  setTimeout(() => {
+                    el.style.transition = "transform 450ms ease";
+                    el.style.transform = "translateX(-25px)";
+                    setTimeout(() => {
+                      el.style.transform = "translateX(0)";
                       setTimeout(() => {
-                        el.style.transition = "transform 450ms ease";
-                        el.style.transform = "translateX(-25px)";
-                        setTimeout(() => {
-                          el.style.transform = "translateX(0)";
-                          setTimeout(() => {
-                            el.style.transition = "";
-                            el.style.transform = "";
-                          }, 450);
-                        }, 450);
-                      }, 700);
-                    }
-                  },
-                  { threshold: 0.4 }
-                );
-                document.querySelectorAll<HTMLElement>("[data-scroll-hint]").forEach((el) => io.observe(el));
-              }
-            </script>
-          </>
-        )}
+                        el.style.transition = "";
+                        el.style.transform = "";
+                      }, 450);
+                    }, 450);
+                  }, 700);
+                }
+              },
+              { threshold: 0.4 }
+            );
+            document.querySelectorAll<HTMLElement>("[data-scroll-hint]").forEach((el) => io.observe(el));
+          }
+        </script>
 
         <!--
           Quando os vídeos forem do TikTok, troque o conteúdo do PhoneMockup pelo embed oficial do TikTok:
@@ -584,7 +657,7 @@ const steps = [
           Still e bastidores dos conteúdos.
         </p>
 
-        <div class="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div id="fotos-grid" class="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
           {gallery.length > 0
             ? gallery.map((p, i) => (
                 <div data-reveal="scale" style={`--reveal-delay: ${i * 100}ms;`} class="stitched overflow-hidden rounded-2xl text-pink-dark">
