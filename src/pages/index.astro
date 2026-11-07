@@ -56,18 +56,6 @@ const aboutPhotos: { src: string; alt: string }[] = [
   { src: "/images/lais-sobre-2.jpg", alt: "Laís Duarte" },
 ];
 
-// galeria da seção "Fotos"
-const gallery: { src: string; alt: string }[] = [
-  { src: "/images/lais-galeria-1.png", alt: "Still de conteúdo da Laís Duarte" },
-  { src: "/images/lais-galeria-3.png", alt: "Still de conteúdo da Laís Duarte" },
-  { src: "/images/lais-galeria-4.png", alt: "Still de conteúdo da Laís Duarte" },
-  { src: "/images/lais-galeria-5.png", alt: "Still de conteúdo da Laís Duarte" },
-  { src: "/images/lais-galeria-7.jpg", alt: "Still de conteúdo da Laís Duarte" },
-  { src: "/images/lais-galeria-8.png", alt: "Still de conteúdo da Laís Duarte" },
-  { src: "/images/lais-galeria-9.png", alt: "Still de conteúdo da Laís Duarte" },
-  { src: "/images/lais-galeria-10.jpg", alt: "Still de conteúdo da Laís Duarte" },
-];
-
 // reels/vídeos do portfólio, fotos da galeria e posts de carrossel vêm do ugc-admin (fetch client-side no <script> lá
 // embaixo, por PUBLIC_PROJECT_SLUG) — a seção mostra "em breve" enquanto não tiver nenhum
 // nicho com vídeo cadastrado lá, e nunca quebra o site se o admin estiver fora do ar.
@@ -536,10 +524,13 @@ const steps = [
 
           function renderGallery(gallery: ApiGalleryPhoto[]) {
             const grid = document.getElementById("fotos-grid");
-            if (!grid || gallery.length === 0) return;
+            const galleryEmpty = document.getElementById("fotos-empty");
+            if (!grid || !galleryEmpty || gallery.length === 0) return;
 
             grid.className = "mt-10 flex flex-wrap justify-center gap-4";
             grid.innerHTML = gallery.map((p) => galleryCardHtml(p)).join("");
+            galleryEmpty.hidden = true;
+            grid.hidden = false;
 
             if (gallery.some((p) => p.platform === "tiktok")) processTiktokEmbeds();
             if (gallery.some((p) => p.platform === "instagram")) processInstagramEmbeds();
@@ -657,26 +648,14 @@ const steps = [
           Still e bastidores dos conteúdos.
         </p>
 
-        <div id="fotos-grid" class="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {gallery.length > 0
-            ? gallery.map((p, i) => (
-                <div data-reveal="scale" style={`--reveal-delay: ${i * 100}ms;`} class="stitched overflow-hidden rounded-2xl text-pink-dark">
-                  <img src={p.src} alt={p.alt} class="aspect-square w-full object-cover" loading="lazy" />
-                </div>
-              ))
-            : Array.from({ length: 6 }, (_, i) => (
-                <div
-                  data-reveal="scale"
-                  style={`--reveal-delay: ${i * 100}ms;`}
-                  class={`stitched flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl ${i % 2 === 0 ? "bg-pink-light text-pink-dark" : "bg-sage-light text-sage-dark"}`}
-                >
-                  <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                    <path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" stroke-linejoin="round" />
-                    <circle cx="12" cy="13.5" r="3.2" />
-                  </svg>
-                  <span class="font-display text-xs font-semibold">foto em breve</span>
-                </div>
-              ))}
+        <div id="fotos-grid" hidden class="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3"></div>
+
+        <div id="fotos-empty" data-reveal="scale" style="--reveal-delay: 120ms;" class="stitched mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl py-16 text-pink-dark">
+          <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" stroke-linejoin="round" />
+            <circle cx="12" cy="13.5" r="3.2" />
+          </svg>
+          <p class="font-display text-sm font-semibold">Em breve: as primeiras fotos do portfólio</p>
         </div>
       </div>
     </section>
