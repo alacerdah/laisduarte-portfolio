@@ -279,6 +279,11 @@ const steps = [
           const escapeHtml = (s: string) =>
             s.replace(/[&<>"']/g, (c) => (({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }) as Record<string, string>)[c]);
 
+          // posts de carrossel às vezes já vêm com query string própria (ex.: ?img_index=2,
+          // pra apontar a foto certa do carrossel) — concatenar "?utm_source=..." direto nisso
+          // quebra a URL com dois "?" e o embed do Instagram distorce/não carrega
+          const igEmbedUrl = (url: string) => url + (url.includes("?") ? "&" : "?") + "utm_source=ig_embed&utm_campaign=loading";
+
           const TILTS = ["sm:-translate-y-2 sm:rotate-2", "", "sm:rotate-1", "sm:translate-y-2 sm:-rotate-1"];
 
           function screenHtml(v: ApiVideo): string {
@@ -287,7 +292,7 @@ const steps = [
             }
             if (v.platform === "instagram") {
               return `
-                <blockquote class="instagram-media" data-instgrm-permalink="${v.url}?utm_source=ig_embed&utm_campaign=loading" data-instgrm-version="14"
+                <blockquote class="instagram-media" data-instgrm-permalink="${igEmbedUrl(v.url)}" data-instgrm-version="14"
                   style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
                   <a href="${v.url}" target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
                 </blockquote>`;
@@ -469,7 +474,7 @@ const steps = [
                 </div>`;
             }
             return `
-              <blockquote class="instagram-media" data-instgrm-permalink="${c.instagram_url}?utm_source=ig_embed&utm_campaign=loading" data-instgrm-version="14"
+              <blockquote class="instagram-media" data-instgrm-permalink="${igEmbedUrl(c.instagram_url)}" data-instgrm-version="14"
                 style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
                 <a href="${c.instagram_url}" target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
               </blockquote>`;
@@ -523,7 +528,7 @@ const steps = [
               p.platform === "tiktok"
                 ? `<blockquote class="tiktok-embed" cite="${p.url}" style="max-width:605px;min-width:325px;"><section></section></blockquote>`
                 : `
-                  <blockquote class="instagram-media" data-instgrm-permalink="${p.url}?utm_source=ig_embed&utm_campaign=loading" data-instgrm-version="14"
+                  <blockquote class="instagram-media" data-instgrm-permalink="${igEmbedUrl(p.url)}" data-instgrm-version="14"
                     style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:1px; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
                     <a href="${p.url}" target="_blank" rel="noopener noreferrer">Ver este post no Instagram</a>
                   </blockquote>`;
