@@ -646,6 +646,30 @@ const steps = [
       </div>
     </section>
 
+    <!-- INSIGHTS -->
+    <section id="insights" class="bg-sage-light py-20">
+      <div class="mx-auto max-w-6xl px-6">
+        <h2 data-reveal class="font-display text-4xl font-black text-sage-dark">Insights</h2>
+        <p data-reveal style="--reveal-delay: 80ms;" class="mt-3 max-w-md text-ink/70">
+          Alcance real dos últimos 30 dias no Instagram.
+        </p>
+
+        <div class="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            { value: "22,6 mil", label: "Visualizações" },
+            { value: "3.995", label: "Contas alcançadas" },
+            { value: "+240", label: "Novos seguidores" },
+            { value: "946", label: "Visitas ao perfil" },
+          ].map((s, i) => (
+            <div data-reveal="scale" style={`--reveal-delay: ${i * 120}ms;`} class="rounded-2xl bg-cream p-6 text-center">
+              <dd class="font-display text-3xl font-black text-pink-dark">{s.value}</dd>
+              <dt class="mt-1 text-xs text-ink/60">{s.label}</dt>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
     <CheckerStrip />
 
     <!-- FOTOS -->
